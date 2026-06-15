@@ -19,8 +19,6 @@ from reportlab.lib.enums import TA_CENTER
 
 def generar_pdf_bytes(df, kpis):
 
-    print(">>> PDF REPORT ACTIVO (VERSION NUEVA 2026) <<<")
-
     buffer = io.BytesIO()
 
     doc = SimpleDocTemplate(
@@ -34,277 +32,250 @@ def generar_pdf_bytes(df, kpis):
 
     styles = getSampleStyleSheet()
 
-    title_style = ParagraphStyle(
-        "TitleCustom",
+    title = ParagraphStyle(
+        "title",
         parent=styles["Title"],
         alignment=TA_CENTER,
-        textColor=colors.HexColor("#003366")
+        textColor=colors.HexColor("#0B2E4A")
     )
 
-    subtitle_style = ParagraphStyle(
-        "SubtitleCustom",
+    subtitle = ParagraphStyle(
+        "subtitle",
         parent=styles["Heading2"],
         alignment=TA_CENTER,
-        textColor=colors.HexColor("#005A9C")
+        textColor=colors.HexColor("#1F6AA5")
     )
 
-    normal = styles["Normal"]
+    body = styles["Normal"]
 
     content = []
 
     # =====================================================
-    # MARCA DE VERSION (VISIBLE EN PDF)
+    # PORTADA EJECUTIVA
     # =====================================================
-    content.append(
-        Paragraph(
-            "<b>VERSION ACTIVA: PDF REPORT NUEVO - ESMAX 2026</b>",
-            title_style
-        )
-    )
-    content.append(Spacer(1, 10))
 
-    # =====================================================
-    # LAYOUT BANNER
-    # =====================================================
     if os.path.exists("LAYOUT.png"):
         try:
-            content.append(
-                RLImage("LAYOUT.png", width=520, height=120)
-            )
+            content.append(RLImage("LAYOUT.png", width=520, height=120))
             content.append(Spacer(1, 10))
         except:
             pass
 
-    # =====================================================
-    # LOGOS
-    # =====================================================
-    logo_row = []
+    logos = []
 
     if os.path.exists("logo_esmax.png"):
         try:
-            logo_row.append(
-                RLImage("logo_esmax.png", width=120, height=40)
-            )
+            logos.append(RLImage("logo_esmax.png", width=120, height=40))
         except:
             pass
 
     if os.path.exists("python_logo.png"):
         try:
-            logo_row.append(
-                RLImage("python_logo.png", width=60, height=60)
-            )
+            logos.append(RLImage("python_logo.png", width=55, height=55))
         except:
             pass
 
-    if logo_row:
-        content.append(Table([logo_row]))
+    if logos:
+        content.append(Table([logos]))
         content.append(Spacer(1, 15))
 
-    # =====================================================
-    # TITULO
-    # =====================================================
-    content.append(Paragraph("ESMAX CONTROL TOWER", title_style))
-    content.append(Paragraph("Sistema Inteligente de Inventario y Forecast", subtitle_style))
+    content.append(Paragraph("ESMAX CONTROL TOWER", title))
+    content.append(Paragraph("Informe Ejecutivo de Gestión de Inventario", subtitle))
+
     content.append(Spacer(1, 15))
 
-    # =====================================================
-    # AUTORES
-    # =====================================================
-    content.append(
-        Paragraph(
-            """
-            <b>Elaborado por:</b><br/>
-            Ignacio Álvarez<br/>
-            Benjamín Tello<br/>
-            Renato Soto
-            """,
-            normal
-        )
-    )
+    content.append(Paragraph("""
+    <b>Elaborado por:</b><br/>
+    Ignacio Álvarez<br/>
+    Benjamín Tello<br/>
+    Renato Soto
+    """, body))
 
     content.append(Spacer(1, 15))
 
     # =====================================================
-    # KPIs
+    # INTRO EJECUTIVA
     # =====================================================
+
+    content.append(Paragraph("<b>1. Resumen Ejecutivo</b>", title))
+
+    content.append(Spacer(1, 5))
+
+    content.append(Paragraph("""
+    Este sistema permite a la organización ESMAX mejorar la toma de decisiones
+    en la gestión de inventarios mediante análisis de datos, proyección de demanda
+    y optimización de reposición de stock.
+
+    El objetivo principal es reducir costos operacionales, minimizar quiebres de stock
+    y mejorar la eficiencia del capital inmovilizado.
+    """, body))
+
+    content.append(Spacer(1, 10))
+
+    # =====================================================
+    # KPIs GERENCIALES
+    # =====================================================
+
     fill_rate = kpis.get("fill_rate", 0)
     mae = kpis.get("mae", 0)
     inv = kpis.get("inventario_prom", 0)
 
+    content.append(Paragraph("<b>2. Indicadores Clave de Desempeño</b>", title))
+
     kpi_table = Table([[
-        f"FILL RATE\n{fill_rate:.2%}",
-        f"MAE\n{mae:.2f}",
-        f"INVENTARIO\n{inv:.0f}"
+        f"Nivel de Servicio\n{fill_rate:.2%}",
+        f"Error de Pronóstico\n{mae:.2f}",
+        f"Inventario Promedio\n{inv:.0f}"
     ]], colWidths=[160, 160, 160])
 
     kpi_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, 0), colors.green),
-        ("BACKGROUND", (1, 0), (1, 0), colors.orange),
-        ("BACKGROUND", (2, 0), (2, 0), colors.blue),
+        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#1F8A70")),
+        ("BACKGROUND", (1, 0), (1, 0), colors.HexColor("#F39C12")),
+        ("BACKGROUND", (2, 0), (2, 0), colors.HexColor("#2E86C1")),
         ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-        ("GRID", (0, 0), (-1, -1), 1, colors.black),
     ]))
 
     content.append(kpi_table)
+
+    content.append(Spacer(1, 10))
+
+    content.append(Paragraph("""
+    <b>Interpretación Gerencial:</b><br/>
+    - El nivel de servicio refleja la capacidad de cumplir demanda del cliente.<br/>
+    - El error de pronóstico indica la precisión del modelo de planificación.<br/>
+    - El inventario promedio representa capital inmovilizado.
+    """, body))
+
     content.append(Spacer(1, 15))
 
     # =====================================================
-    # RESUMEN
+    # JUSTIFICACION PYTHON
     # =====================================================
-    content.append(
-        Paragraph(
-            """
-            <b>Resumen Ejecutivo</b><br/><br/>
-            Plataforma desarrollada en Python para análisis de inventario,
-            forecast de demanda y optimización de reposición mediante KPIs
-            y modelos analíticos.
-            """,
-            normal
-        )
-    )
+
+    content.append(Paragraph("<b>3. Justificación Tecnológica (Python)</b>", title))
+
+    content.append(Paragraph("""
+    El sistema fue desarrollado en <b>Python</b> debido a su capacidad analítica,
+    ecosistema de librerías y escalabilidad para proyectos de ciencia de datos.
+
+    Python permite integrar:
+    • Procesamiento de datos (Pandas)<br/>
+    • Modelos predictivos (Scikit-learn)<br/>
+    • Automatización de reportes (ReportLab)<br/>
+    • Dashboards interactivos (Streamlit)
+
+    Esto reduce significativamente el tiempo de análisis manual y habilita
+    decisiones basadas en datos en tiempo real.
+    """, body))
+
+    content.append(Spacer(1, 15))
+
+    # =====================================================
+    # OPTIMIZACION Y COSTOS
+    # =====================================================
+
+    ahorro = inv * 0.12
+
+    content.append(Paragraph("<b>4. Impacto en Costos y Optimización</b>", title))
+
+    content.append(Paragraph(f"""
+    El modelo de optimización permite reducir inventario innecesario mediante
+    la aplicación de reglas de reposición (ROP, EOQ y stock de seguridad).
+
+    <b>Impacto estimado:</b><br/>
+    • Reducción de sobrestock: 10% - 15%<br/>
+    • Mejora en rotación de inventario<br/>
+    • Disminución de capital inmovilizado
+
+    <b>Ahorro estimado anual:</b> ${ahorro:,.0f}
+    """, body))
 
     content.append(Spacer(1, 15))
 
     # =====================================================
     # FLUJO
     # =====================================================
-    content.append(
-        Paragraph("<b>Flujo del Sistema</b>", title_style)
-    )
 
-    flujo = Table([[
-        "DATOS", "→", "KPIs", "→", "FORECAST", "→", "OPTIMIZACIÓN", "→", "REPORTE"
+    content.append(Paragraph("<b>5. Flujo del Sistema</b>", title))
+
+    flow = Table([[
+        "Datos", "→", "Procesamiento", "→", "Forecast", "→", "Optimización", "→", "Reporte"
     ]])
 
-    flujo.setStyle(TableStyle([
+    flow.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 1, colors.grey),
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#E8F4FD")),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
     ]))
 
-    content.append(flujo)
+    content.append(flow)
+
     content.append(Spacer(1, 15))
 
     # =====================================================
     # DATOS
     # =====================================================
-    content.append(Paragraph("<b>Descripción de Datos</b>", title_style))
 
-    cols = [
+    content.append(Paragraph("<b>6. Estructura de Datos</b>", title))
+
+    table = [
         ["Campo", "Descripción"],
-        ["fecha", "Fecha del registro"],
-        ["sku", "Producto"],
-        ["demanda", "Demanda estimada"],
+        ["fecha", "Tiempo de registro"],
+        ["sku", "Identificador de producto"],
+        ["demanda", "Demanda proyectada"],
         ["ventas", "Ventas reales"],
         ["inventario", "Stock disponible"],
-        ["lead_time", "Tiempo reposición"],
-        ["costo_unitario", "Costo unidad"]
+        ["lead_time", "Tiempo de reposición"],
+        ["costo_unitario", "Costo por unidad"]
     ]
 
-    table = Table(cols, colWidths=[120, 350])
+    t = Table(table, colWidths=[120, 350])
 
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#003366")),
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0B2E4A")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
     ]))
 
-    content.append(table)
-    content.append(Spacer(1, 15))
-
-    # =====================================================
-    # IMPACTO ECONOMICO
-    # =====================================================
-    ahorro = inv * 0.12
-
-    content.append(
-        Paragraph(
-            f"""
-            <b>Impacto Económico Estimado</b><br/><br/>
-            Optimización estimada del 12% en costos de inventario.<br/>
-            Ahorro aproximado: <b>${ahorro:,.0f}</b>
-            """,
-            normal
-        )
-    )
+    content.append(t)
 
     content.append(Spacer(1, 15))
 
     # =====================================================
-    # TECNOLOGIAS
+    # CONCLUSION EJECUTIVA
     # =====================================================
-    content.append(
-        Paragraph(
-            """
-            <b>Tecnologías</b><br/>
-            Python, Streamlit, Pandas, NumPy, Scikit-Learn, ReportLab
-            """,
-            normal
-        )
-    )
 
-    content.append(PageBreak())
+    content.append(Paragraph("<b>7. Conclusión Ejecutiva</b>", title))
 
-    # =====================================================
-    # TABLA DATASET
-    # =====================================================
-    content.append(Paragraph("<b>Muestra de Datos</b>", title_style))
+    content.append(Paragraph("""
+    La implementación de ESMAX Control Tower permite transformar la gestión de inventario
+    desde un enfoque reactivo a uno predictivo.
 
-    try:
-        head = list(df.columns)
-        rows = [head]
+    Esto habilita:
+    • Mayor eficiencia operativa<br/>
+    • Reducción de costos estructurales<br/>
+    • Mejor nivel de servicio al cliente<br/>
+    • Toma de decisiones basada en datos
 
-        for _, r in df.head(20).iterrows():
-            rows.append([str(r.get(c, "")) for c in head])
-
-        t = Table(rows)
-
-        t.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#003366")),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ]))
-
-        content.append(t)
-
-    except:
-        content.append(Paragraph("Error al generar tabla", normal))
+    El sistema representa una herramienta escalable para la digitalización
+    de la cadena de suministro.
+    """, body))
 
     content.append(Spacer(1, 20))
 
     # =====================================================
-    # CONCLUSIONES
+    # FOOTER
     # =====================================================
-    content.append(
-        Paragraph("<b>Conclusiones</b>", title_style)
-    )
 
-    content.append(
-        Paragraph(
-            """
-            • Centralización de datos.<br/>
-            • Mejora en toma de decisiones.<br/>
-            • Reducción de quiebres de stock.<br/>
-            • Optimización de inventario mediante análisis.<br/>
-            • Reportes automáticos ejecutivos.
-            """,
-            normal
-        )
-    )
-
-    content.append(Spacer(1, 20))
-
-    content.append(
-        Paragraph(
-            "<hr/>ESMAX Control Tower © 2026 - Proyecto académico",
-            normal
-        )
-    )
+    content.append(Paragraph("""
+    <hr/>
+    ESMAX Control Tower © 2026<br/>
+    Proyecto desarrollado por Ignacio Álvarez, Benjamín Tello y Renato Soto
+    """, body))
 
     doc.build(content)
     buffer.seek(0)
