@@ -1,4 +1,3 @@
-# main.py
 import streamlit as st
 from PIL import Image
 import pandas as pd
@@ -7,52 +6,55 @@ import io
 import traceback
 import os
 
-# ----------------------------
+# =========================
 # CONFIG
-# ----------------------------
+# =========================
 st.set_page_config(
     page_title="ESMAX Control Tower",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ----------------------------
-# ESTILOS EJECUTIVOS
-# ----------------------------
+# =========================
+# ESTILO EJECUTIVO
+# =========================
 st.markdown(
     """
     <style>
-    .kpi-card {
+    .kpi {
         background: linear-gradient(90deg,#0b5f8a,#0b9bd3);
-        color: white;
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        font-weight: bold;
+        color:white;
+        padding:15px;
+        border-radius:12px;
+        text-align:center;
+        font-weight:bold;
     }
-    .metric-box {
-        background: white;
-        padding: 12px;
-        border-radius: 10px;
-        box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+
+    .card {
+        background:white;
+        padding:15px;
+        border-radius:12px;
+        box-shadow:0px 1px 6px rgba(0,0,0,0.08);
     }
+
     .title {
-        color:#0b5f8a;
-        font-size:22px;
+        font-size:24px;
         font-weight:700;
+        color:#0b5f8a;
     }
-    .sub {
-        color:#6c757d;
+
+    .subtitle {
         font-size:13px;
+        color:#6c757d;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ----------------------------
+# =========================
 # IMPORTS SEGUROS
-# ----------------------------
+# =========================
 try:
     from modules.data_generator import generar_dataset_esmax
 except:
@@ -79,18 +81,37 @@ try:
 except:
     generar_pdf_bytes = None
 
-# ----------------------------
-# SIDEBAR
-# ----------------------------
-st.sidebar.header("Control Operacional")
 
-uploaded = st.sidebar.file_uploader("Subir CSV", type=["csv","xlsx"])
-use_sample = st.sidebar.checkbox("Usar dataset simulado", True)
+# =========================
+# HEADER (LAYOUT GRANDE ARRIBA)
+# =========================
+if os.path.exists("LAYOUT.png"):
+    st.image(Image.open("LAYOUT.png"), use_container_width=True)
+
+st.markdown("## 📊 ESMAX CONTROL TOWER")
+st.markdown("Sistema de optimización de inventario, forecast y analítica operacional")
+st.markdown("---")
+
+
+# =========================
+# SIDEBAR (NO SE ELIMINA NADA)
+# =========================
+st.sidebar.header("⚙️ Control Panel")
+
+uploaded = st.sidebar.file_uploader("Subir CSV / Excel", type=["csv", "xlsx"])
+use_sample = st.sidebar.checkbox("Usar datos simulados", True)
 dias = st.sidebar.slider("Horizonte de simulación", 30, 365, 180, 30)
 
-# ----------------------------
+st.sidebar.markdown("### Visualización")
+show_kpis = st.sidebar.checkbox("KPIs", True)
+show_charts = st.sidebar.checkbox("Gráficos", True)
+show_abc = st.sidebar.checkbox("ABC", True)
+show_opt = st.sidebar.checkbox("Optimización", True)
+
+
+# =========================
 # DATA
-# ----------------------------
+# =========================
 df = None
 
 if uploaded:
@@ -103,9 +124,10 @@ if df is None:
     st.error("No hay datos disponibles")
     st.stop()
 
-# ----------------------------
+
+# =========================
 # KPIs
-# ----------------------------
+# =========================
 if calcular_kpis:
     kpis = calcular_kpis(df)
 else:
@@ -115,30 +137,39 @@ else:
         "inventario_prom": df["inventario"].mean()
     }
 
-# ----------------------------
+
+# =========================
 # TABS
-# ----------------------------
+# =========================
 tabs = st.tabs(["Dashboard","Forecast","Inventario","Optimización","Reporte"])
+
 
 # =========================
 # DASHBOARD
 # =========================
 with tabs[0]:
-    st.markdown("## 📊 Dashboard Ejecutivo")
+    st.markdown("### 📊 Dashboard Ejecutivo")
 
     c1,c2,c3 = st.columns(3)
 
-    c1.markdown(f"<div class='kpi-card'>Fill Rate<br>{kpis['fill_rate']:.2%}</div>", unsafe_allow_html=True)
-    c2.markdown(f"<div class='metric-box'><b>MAE</b><br>{kpis['mae']:.1f}</div>", unsafe_allow_html=True)
-    c3.markdown(f"<div class='metric-box'><b>Inventario Prom</b><br>{kpis['inventario_prom']:.0f}</div>", unsafe_allow_html=True)
+    if show_kpis:
+        c1.markdown(f"<div class='kpi'>Fill Rate<br>{kpis['fill_rate']:.2%}</div>", unsafe_allow_html=True)
+        c2.markdown(f"<div class='card'><b>MAE</b><br>{kpis['mae']:.1f}</div>", unsafe_allow_html=True)
+        c3.markdown(f"<div class='card'><b>Inventario Prom</b><br>{kpis['inventario_prom']:.0f}</div>", unsafe_allow_html=True)
 
-    st.dataframe(df.head(10), use_container_width=True)
+    st.markdown("#### 📦 Vista de datos")
+    st.dataframe(df.head(15), use_container_width=True)
+
+    if show_charts and "fecha" in df.columns:
+        st.markdown("#### 📈 Tendencias")
+        st.line_chart(df.set_index("fecha")[["demanda","ventas","inventario"]])
+
 
 # =========================
 # FORECAST
 # =========================
 with tabs[1]:
-    st.markdown("## 🔮 Forecast de Demanda")
+    st.markdown("### 🔮 Forecast de Demanda")
 
     if generar_forecast:
         df_fc = generar_forecast(df)
@@ -150,71 +181,80 @@ with tabs[1]:
 
     st.line_chart(df_fc.set_index("fecha")[["demanda","forecast"]])
 
-    st.info("El forecast estima la demanda futura usando comportamiento histórico.")
+    st.info("Forecast basado en histórico de demanda para estimación de comportamiento futuro.")
+
 
 # =========================
 # INVENTARIO
 # =========================
 with tabs[2]:
-    st.markdown("## 📦 Control de Inventario")
+    st.markdown("### 📦 Inventario")
 
-    st.bar_chart(df.set_index("fecha")["inventario"])
+    if "inventario" in df.columns:
+        st.bar_chart(df.set_index("fecha")["inventario"])
 
-    if clasificacion_abc:
-        abc = clasificacion_abc(df)
-    else:
-        abc = df.groupby("sku")["demanda"].sum().reset_index()
+    if show_abc:
+        st.markdown("### 🧠 Clasificación ABC")
 
-    st.dataframe(abc)
+        if clasificacion_abc:
+            abc = clasificacion_abc(df)
+        else:
+            abc = df.groupby("sku")["demanda"].sum().reset_index()
+
+        st.dataframe(abc, use_container_width=True)
+
 
 # =========================
-# OPTIMIZACIÓN (EJECUTIVA)
+# OPTIMIZACIÓN (MEJORADA)
 # =========================
 with tabs[3]:
-    st.markdown("## ⚙️ Optimización de Inventario")
+    st.markdown("### ⚙️ Optimización de Inventario")
 
     optim = optimizar_inventario(df) if optimizar_inventario else {}
 
-    # KPIs
-    col1,col2,col3 = st.columns(3)
+    c1,c2,c3 = st.columns(3)
 
-    col1.metric("Demanda prom", f"{optim.get('demanda_prom',0):.1f}")
-    col2.metric("Lead time", f"{optim.get('lead_time_prom',0):.1f}")
-    col3.metric("Inventario", f"{optim.get('inventario_prom',0):.0f}")
+    c1.metric("Demanda prom", f"{optim.get('demanda_prom',0):.1f}")
+    c2.metric("Lead time", f"{optim.get('lead_time_prom',0):.1f}")
+    c3.metric("Inventario prom", f"{optim.get('inventario_prom',0):.0f}")
 
-    st.divider()
+    st.markdown("---")
 
-    # decisiones
-    st.markdown("### 🧠 Decisión Operacional")
+    st.markdown("### 🧠 Recomendación Operacional")
 
-    if optim.get("suggested_order",0) > 0:
-        st.error(f"🔴 Orden sugerida: {optim['suggested_order']} unidades")
-        st.markdown("Existe riesgo de quiebre de stock.")
+    sugerido = optim.get("suggested_order",0)
+
+    if sugerido > 0:
+        st.error(f"🔴 Se recomienda ordenar: {sugerido} unidades")
+        st.markdown("Existe riesgo de quiebre de stock si no se repone.")
     else:
         st.success("🟢 No se requiere compra")
         st.markdown("El inventario actual cubre la demanda proyectada.")
 
-    st.divider()
+    st.markdown("---")
 
-    st.markdown("### 📊 Parámetros de optimización")
-    st.write({
-        "Stock seguridad": optim.get("stock_seguridad"),
-        "ROP": optim.get("reorder_point"),
-        "EOQ": optim.get("eoq")
-    })
+    st.markdown("### 📊 Parámetros logísticos")
+
+    col1,col2,col3 = st.columns(3)
+
+    col1.write(f"Stock seguridad: {optim.get('stock_seguridad',0):.1f}")
+    col2.write(f"Reorder Point: {optim.get('reorder_point',0):.1f}")
+    col3.write(f"EOQ: {optim.get('eoq',0):.1f}")
+
 
 # =========================
 # REPORTE
 # =========================
 with tabs[4]:
-    st.markdown("## 📄 Reporte Ejecutivo")
+    st.markdown("### 📄 Reporte Ejecutivo")
 
     if generar_pdf_bytes:
         pdf = generar_pdf_bytes(df,kpis)
-        st.download_button("Descargar PDF", pdf, "ESMAX_Report.pdf")
+        st.download_button("Descargar PDF Ejecutivo", pdf, "ESMAX_Report.pdf")
+
 
 # =========================
-# LAYOUT AL FINAL (COMO PEDISTE)
+# LAYOUT FINAL (GRAN BLOQUE CORPORATIVO)
 # =========================
 st.markdown("---")
 
@@ -222,8 +262,11 @@ col1,col2 = st.columns([3,1])
 
 with col1:
     st.markdown("### ESMAX Control Tower")
-    st.markdown("Sistema de optimización de inventario y forecast")
+    st.markdown("""
+    Plataforma de analítica avanzada para optimización de inventario,
+    forecast de demanda y toma de decisiones operacionales.
+    """)
 
 with col2:
     if os.path.exists("LAYOUT.png"):
-        st.image(Image.open("LAYOUT.png"), width=250)
+        st.image(Image.open("LAYOUT.png"), use_container_width=True)
