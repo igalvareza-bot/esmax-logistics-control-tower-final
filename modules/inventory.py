@@ -1,20 +1,20 @@
-# modules/inventory.py
 import numpy as np
 import pandas as pd
 
 def calcular_kpis(df):
     """
-    KPIs logísticos claros para operación
+    KPIs logísticos + compatibilidad con main.py
     """
 
     res = {
         "fill_rate": 0.0,
-        "desviacion_demanda": 0.0,
+        "mae": 0.0,                     # 👈 MANTENER PARA NO ROMPER MAIN
+        "desviacion_demanda": 0.0,     # 👈 NUEVO NOMBRE LOGÍSTICO
         "inventario_prom": 0.0
     }
 
     # =========================
-    # Fill Rate
+    # Fill rate + desviación
     # =========================
     if "demanda" in df.columns and "ventas" in df.columns:
         mask = df["demanda"] > 0
@@ -26,13 +26,16 @@ def calcular_kpis(df):
 
         res["fill_rate"] = float(fr)
 
-        # 🔥 MAE RENOMBRADO A LENGUAJE LOGÍSTICO
-        res["desviacion_demanda"] = float(
-            (df["demanda"] - df["ventas"]).abs().mean()
-        )
+        error = (df["demanda"] - df["ventas"]).abs().mean()
+
+        res["mae"] = float(error)  # 👈 MAIN FUNCIONA
+        res["desviacion_demanda"] = float(error)  # 👈 LOGÍSTICO
 
     elif "demanda" in df.columns:
-        res["desviacion_demanda"] = float(df["demanda"].abs().mean())
+        error = float(df["demanda"].abs().mean())
+
+        res["mae"] = error
+        res["desviacion_demanda"] = error
         res["fill_rate"] = 0.0
 
     # =========================
@@ -40,29 +43,5 @@ def calcular_kpis(df):
     # =========================
     if "inventario" in df.columns:
         res["inventario_prom"] = float(df["inventario"].mean())
-    else:
-        res["inventario_prom"] = 0.0
 
     return res
-
-
-# =========================
-# ABC CLASIFICACIÓN (OK)
-# =========================
-def clasificacion_abc(df):
-    resumen = df.groupby("sku")["demanda"].sum().reset_index()
-    resumen = resumen.sort_values(by="demanda", ascending=False)
-
-    resumen["acumulado"] = resumen["demanda"].cumsum() / resumen["demanda"].sum()
-
-    def categoria(x):
-        if x <= 0.8:
-            return "A"
-        elif x <= 0.95:
-            return "B"
-        else:
-            return "C"
-
-    resumen["ABC"] = resumen["acumulado"].apply(categoria)
-
-    return resumen
