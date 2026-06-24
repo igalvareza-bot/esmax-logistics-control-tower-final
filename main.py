@@ -78,10 +78,13 @@ except:
 st.sidebar.header("Panel de Control")
 
 uploaded = st.sidebar.file_uploader("Subir datos (CSV/XLSX)", type=["csv","xlsx"])
+use_sample = st.sidebar.checkbox("Usar datos simulados", True)
 dias = st.sidebar.slider("Horizonte de análisis (días)", 30, 365, 180)
 
+show_kpis = st.sidebar.checkbox("KPIs", True)
 show_graphs = st.sidebar.checkbox("Gráficos", True)
 show_abc = st.sidebar.checkbox("ABC", True)
+show_opt = st.sidebar.checkbox("Optimización", True)
 
 # =========================
 # DATA
@@ -95,8 +98,6 @@ if df is None:
     st.error("No hay datos disponibles")
     st.stop()
 
-df = df.copy()
-
 # =========================
 # KPIs
 # =========================
@@ -105,26 +106,20 @@ if calcular_kpis:
 else:
     kpis = {
         "fill_rate": (df["ventas"]/df["demanda"]).mean(),
-        "mae": (df["demanda"] - df["ventas"]).abs().mean(),
+        "mae": (df["demanda"] - df.get("ventas",0)).abs().mean(),
         "inventario_prom": df["inventario"].mean()
     }
 
 # =========================
-# OPTIMIZACIÓN (ÚNICA FUENTE)
+# OPTIMIZACIÓN
 # =========================
-optim = optimizar_inventario(df)
+optim = optimizar_inventario(df) if optimizar_inventario else {}
 
-# DEBUG (puedes quitar luego)
-st.caption("DEBUG OPTIMIZER:")
-st.write(optim)
-
-# Riesgo operativo coherente
-if optim.get("suggested_order", 0) > 500:
+riesgo = "BAJO"
+if optim.get("suggested_order",0) > 500:
     riesgo = "ALTO"
-elif optim.get("suggested_order", 0) > 0:
+elif optim.get("suggested_order",0) > 0:
     riesgo = "MEDIO"
-else:
-    riesgo = "BAJO"
 
 # =========================
 # HEADER
@@ -155,6 +150,7 @@ with tabs[0]:
     c2.markdown(f"<div class='card'><b>MAE</b><br>{kpis['mae']:.1f}</div>", unsafe_allow_html=True)
     c3.markdown(f"<div class='card'><b>Inventario Prom</b><br>{kpis['inventario_prom']:.0f}</div>", unsafe_allow_html=True)
 
+    st.markdown("### Datos")
     st.dataframe(df.head(20), use_container_width=True)
 
     if show_graphs:
@@ -187,12 +183,12 @@ with tabs[2]:
 
     st.bar_chart(df.set_index("fecha")["inventario"])
 
-    st.markdown("### Clasificación ABC")
-
-    if clasificacion_abc:
-        st.dataframe(clasificacion_abc(df))
-    else:
-        st.dataframe(df.groupby("sku")["demanda"].sum().reset_index())
+    if show_abc:
+        st.markdown("### Clasificación ABC")
+        if clasificacion_abc:
+            st.dataframe(clasificacion_abc(df))
+        else:
+            st.dataframe(df.groupby("sku")["demanda"].sum().reset_index())
 
 # =========================
 # OPTIMIZACIÓN
@@ -222,11 +218,11 @@ with tabs[4]:
     st.markdown("### Reporte ejecutivo")
 
     if generar_pdf_bytes:
-        pdf = generar_pdf_bytes(df, kpis)
+        pdf = generar_pdf_bytes(df,kpis)
         st.download_button("Descargar PDF", pdf, "ESMAX_Report.pdf")
 
 # =========================
-# FOOTER
+# CIERRE CORPORATIVO
 # =========================
 st.markdown("---")
 st.markdown("## ESMAX CONTROL TOWER")
