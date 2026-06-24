@@ -2,63 +2,79 @@ import numpy as np
 
 def optimizar_inventario(df=None):
     """
-    EOQ ABC basado EXCLUSIVAMENTE en los datos entregados por el usuario.
-    Sin promedios, sin agregaciones, sin mezcla.
+    ABC EOQ + ROP compatible con main.py
+    NO rompe UI
     """
 
     # =========================
-    # PARÁMETROS FIJOS
+    # DATOS FIJOS (TU TABLA)
     # =========================
     DIAS_TRABAJO = 300
     LEAD_TIME = 5
     COSTO_PEDIR = 45000
 
-    # =========================
-    # DATOS EXACTOS DEL USUARIO
-    # =========================
-    clases = {
-        "A": {
-            "demanda": 12000,
-            "h": 3300
-        },
-        "B": {
-            "demanda": 3500,
-            "h": 9900
-        },
-        "C": {
-            "demanda": 600,
-            "h": 26400
-        }
-    }
+    A = {"demanda": 12000, "h": 3300}
+    B = {"demanda": 3500, "h": 9900}
+    C = {"demanda": 600, "h": 26400}
 
-    resultado = {}
+    clases = [A, B, C]
 
     # =========================
-    # CÁLCULO POR CLASE
+    # AGREGADOS (PARA UI SIMPLE)
     # =========================
-    for clase, d in clases.items():
+    eoq_list = []
+    rop_list = []
+    ss_list = []
 
-        D = d["demanda"]
-        H = d["h"]
+    inventario_simulado = 500  # solo referencia estable
 
-        # EOQ (CLÁSICO)
-        eoq = np.sqrt((2 * D * COSTO_PEDIR) / H)
+    for c in clases:
 
-        # DEMANDA DIARIA REAL
+        D = c["demanda"]
+        H = c["h"]
+
         demanda_diaria = D / DIAS_TRABAJO
 
-        # REORDER POINT (ROP)
+        # EOQ clásico
+        eoq = np.sqrt((2 * D * COSTO_PEDIR) / H)
+
+        # ROP
         reorder_point = demanda_diaria * LEAD_TIME
 
-        # STOCK SEGURIDAD (20% operativo)
+        # SS
         stock_seguridad = reorder_point * 0.2
 
-        resultado[clase] = {
-            "EOQ": round(eoq, 2),
-            "Demanda anual": D,
-            "Demanda diaria": round(demanda_diaria, 2),
-            "Reorder Point": round(reorder_point, 2),
-            "Stock seguridad": round(stock_seguridad, 2)
-        }
+        eoq_list.append(eoq)
+        rop_list.append(reorder_point)
+        ss_list.append(stock_seguridad)
 
-    return resultado
+    # =========================
+    # PROMEDIOS (PARA DASHBOARD)
+    # =========================
+    eoq_avg = float(np.mean(eoq_list))
+    rop_avg = float(np.mean(rop_list))
+    ss_avg = float(np.mean(ss_list))
+
+    # =========================
+    # PEDIDO SUGERIDO (CLAVE)
+    # =========================
+    inventario_actual = inventario_simulado
+    suggested_order = max(0, rop_avg - inventario_actual)
+
+    # =========================
+    # RIESGO
+    # =========================
+    if suggested_order > rop_avg * 0.5:
+        riesgo = "ALTO"
+    elif suggested_order > 0:
+        riesgo = "MEDIO"
+    else:
+        riesgo = "BAJO"
+
+    return {
+        "eoq": eoq_avg,
+        "reorder_point": rop_avg,
+        "stock_seguridad": ss_avg,
+        "suggested_order": suggested_order,
+        "riesgo": riesgo
+    }
