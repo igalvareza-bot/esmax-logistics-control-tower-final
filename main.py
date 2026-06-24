@@ -147,7 +147,7 @@ with tabs[0]:
     c1,c2,c3 = st.columns(3)
 
     c1.markdown(f"<div class='kpi'>Fill Rate<br>{kpis['fill_rate']:.2%}</div>", unsafe_allow_html=True)
-    c2.markdown(f"<div class='card'><b>MAE</b><br>{kpis['mae']:.1f}</div>", unsafe_allow_html=True)
+    c2.markdown(f"<div class='card'><b>Desviación de Demanda</b><br>{kpis['mae']:.1f}</div>", unsafe_allow_html=True)
     c3.markdown(f"<div class='card'><b>Inventario Prom</b><br>{kpis['inventario_prom']:.0f}</div>", unsafe_allow_html=True)
 
     st.markdown("### Datos")
