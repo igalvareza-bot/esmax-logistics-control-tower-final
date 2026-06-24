@@ -1,85 +1,74 @@
 import numpy as np
 
 def optimizar_inventario(df=None):
+    """
+    NO depende del dataframe.
+    Usa parámetros fijos del negocio (A, B, C).
+    """
 
     # =========================
-    # PARÁMETROS DEL MODELO
+    # DATOS BASE REALES (TU INPUT)
     # =========================
-    DIAS_TRABAJO = 300
-    LEAD_TIME = 5
-    COSTO_PEDIR = 45000
 
-    # =========================
-    # DATOS EXACTOS ENTREGADOS
-    # =========================
-    CLASES = {
-        "A": {"demanda": 12000, "h": 3300},
-        "B": {"demanda": 3500, "h": 9900},
-        "C": {"demanda": 600, "h": 26400}
+    productos = {
+        "A": {
+            "demanda": 12000,
+            "costo_pedir": 45000,
+            "costo_mant": 3300,
+            "lead_time": 5,
+            "costo_unitario": 15000,
+            "dias": 300
+        },
+        "B": {
+            "demanda": 3500,
+            "costo_pedir": 45000,
+            "costo_mant": 9900,
+            "lead_time": 5,
+            "costo_unitario": 45000,
+            "dias": 300
+        },
+        "C": {
+            "demanda": 600,
+            "costo_pedir": 45000,
+            "costo_mant": 26400,
+            "lead_time": 5,
+            "costo_unitario": 120000,
+            "dias": 300
+        }
     }
 
-    resultado = {}
+    resultados = {}
 
-    # =========================
-    # CÁLCULO POR CLASE (SIN MEZCLA)
-    # =========================
-    for k, v in CLASES.items():
+    for k, p in productos.items():
 
-        D = v["demanda"]
-        H = v["h"]
+        D = p["demanda"]
+        S = p["costo_pedir"]
+        H = p["costo_mant"]
 
-        demanda_diaria = D / DIAS_TRABAJO
+        # =========================
+        # EOQ REAL (WILSON)
+        # Q* = sqrt( (2DS) / H )
+        # =========================
+        eoq = np.sqrt((2 * D * S) / H)
 
-        # EOQ CLÁSICO
-        eoq = np.sqrt((2 * D * COSTO_PEDIR) / H)
+        # demanda diaria
+        demanda_diaria = D / p["dias"]
 
-        # REORDER POINT
-        reorder_point = demanda_diaria * LEAD_TIME
+        # stock de seguridad simple (lead time)
+        stock_seguridad = demanda_diaria * p["lead_time"]
 
-        # STOCK SEGURIDAD
-        stock_seguridad = reorder_point * 0.2
+        # punto de reorden
+        reorder_point = (demanda_diaria * p["lead_time"]) + stock_seguridad
 
-        resultado[k] = {
-            "EOQ": float(round(eoq, 2)),
-            "Demanda anual": float(D),
-            "Demanda diaria": float(round(demanda_diaria, 2)),
-            "Reorder Point": float(round(reorder_point, 2)),
-            "Stock seguridad": float(round(stock_seguridad, 2))
+        # pedido sugerido (simple lógico)
+        suggested_order = max(0, reorder_point)
+
+        resultados[k] = {
+            "demanda_anual": D,
+            "eoq": round(eoq, 2),
+            "stock_seguridad": round(stock_seguridad, 2),
+            "reorder_point": round(reorder_point, 2),
+            "suggested_order": round(suggested_order, 2)
         }
 
-    # =========================
-    # AGREGADOS PARA MAIN (COMPATIBILIDAD TOTAL)
-    # =========================
-    rop_total = sum(r["Reorder Point"] for r in resultado.values())
-    ss_total = sum(r["Stock seguridad"] for r in resultado.values())
-
-    inventario_simulado = 500
-
-    suggested_order = max(0, rop_total - inventario_simulado)
-
-    # =========================
-    # RIESGO OPERATIVO
-    # =========================
-    if suggested_order > rop_total * 0.5:
-        riesgo = "ALTO"
-    elif suggested_order > 0:
-        riesgo = "MEDIO"
-    else:
-        riesgo = "BAJO"
-
-    # =========================
-    # RETURN COMPATIBLE CON TU MAIN.PY
-    # =========================
-    return {
-        # 🔵 CLASES SEPARADAS (LO QUE PEDISTE)
-        "A": resultado["A"],
-        "B": resultado["B"],
-        "C": resultado["C"],
-
-        # 🟢 CAMPOS QUE TU MAIN USA (NO SE ROMPE)
-        "eoq": float((resultado["A"]["EOQ"] + resultado["B"]["EOQ"] + resultado["C"]["EOQ"]) / 3),
-        "reorder_point": float(rop_total / 3),
-        "stock_seguridad": float(ss_total / 3),
-        "suggested_order": float(suggested_order),
-        "riesgo": riesgo
-    }
+    return resultados
