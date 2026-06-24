@@ -1,74 +1,70 @@
+# modules/inventory_optimizer.py
 import numpy as np
 
-def optimizar_inventario(df=None):
+def optimizar_inventario(df):
     """
-    NO depende del dataframe.
-    Usa parámetros fijos del negocio (A, B, C).
+    MODELO FIJO PROFESIONAL BASADO EN ABC (NO PROMEDIOS)
     """
 
     # =========================
-    # DATOS BASE REALES (TU INPUT)
+    # PARÁMETROS FIJOS (SEGÚN TU MODELO EOQ)
     # =========================
 
-    productos = {
-        "A": {
-            "demanda": 12000,
-            "costo_pedir": 45000,
-            "costo_mant": 3300,
-            "lead_time": 5,
-            "costo_unitario": 15000,
-            "dias": 300
-        },
-        "B": {
-            "demanda": 3500,
-            "costo_pedir": 45000,
-            "costo_mant": 9900,
-            "lead_time": 5,
-            "costo_unitario": 45000,
-            "dias": 300
-        },
-        "C": {
-            "demanda": 600,
-            "costo_pedir": 45000,
-            "costo_mant": 26400,
-            "lead_time": 5,
-            "costo_unitario": 120000,
-            "dias": 300
-        }
+    costo_pedir = 45000
+
+    # CLASE A
+    D_A = 12000
+    H_A = 3300
+    eoq_a = np.sqrt((2 * D_A * costo_pedir) / H_A)
+
+    # CLASE B
+    D_B = 3500
+    H_B = 9900
+    eoq_b = np.sqrt((2 * D_B * costo_pedir) / H_B)
+
+    # CLASE C
+    D_C = 600
+    H_C = 26400
+    eoq_c = np.sqrt((2 * D_C * costo_pedir) / H_C)
+
+    # =========================
+    # REGLA OPERATIVA SIMPLE
+    # =========================
+    stock_seguridad = {
+        "A": 102.3,
+        "B": 40.0,
+        "C": 17.9
     }
 
-    resultados = {}
+    reorder_point = {
+        "A": 808.3,
+        "B": 200.0,
+        "C": 89.4
+    }
 
-    for k, p in productos.items():
+    suggested_order = {
+        "A": max(0, round(reorder_point["A"] - 150)),
+        "B": max(0, round(reorder_point["B"] - 150)),
+        "C": max(0, round(reorder_point["C"] - 150)),
+    }
 
-        D = p["demanda"]
-        S = p["costo_pedir"]
-        H = p["costo_mant"]
-
-        # =========================
-        # EOQ REAL (WILSON)
-        # Q* = sqrt( (2DS) / H )
-        # =========================
-        eoq = np.sqrt((2 * D * S) / H)
-
-        # demanda diaria
-        demanda_diaria = D / p["dias"]
-
-        # stock de seguridad simple (lead time)
-        stock_seguridad = demanda_diaria * p["lead_time"]
-
-        # punto de reorden
-        reorder_point = (demanda_diaria * p["lead_time"]) + stock_seguridad
-
-        # pedido sugerido (simple lógico)
-        suggested_order = max(0, reorder_point)
-
-        resultados[k] = {
-            "demanda_anual": D,
-            "eoq": round(eoq, 2),
-            "stock_seguridad": round(stock_seguridad, 2),
-            "reorder_point": round(reorder_point, 2),
-            "suggested_order": round(suggested_order, 2)
+    return {
+        "A": {
+            "stock_seguridad": stock_seguridad["A"],
+            "reorder_point": reorder_point["A"],
+            "eoq": eoq_a,
+            "suggested_order": suggested_order["A"]
+        },
+        "B": {
+            "stock_seguridad": stock_seguridad["B"],
+            "reorder_point": reorder_point["B"],
+            "eoq": eoq_b,
+            "suggested_order": suggested_order["B"]
+        },
+        "C": {
+            "stock_seguridad": stock_seguridad["C"],
+            "reorder_point": reorder_point["C"],
+            "eoq": eoq_c,
+            "suggested_order": suggested_order["C"]
         }
-
-    return resultados
+    }
