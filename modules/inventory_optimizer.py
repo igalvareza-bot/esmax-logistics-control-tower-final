@@ -2,66 +2,80 @@ import numpy as np
 
 def optimizar_inventario(df=None):
     """
-    Modelo EOQ ABC fijo (industrial simplificado)
-    Basado en datos entregados por usuario.
+    EOQ + ROP + SS basado en modelo ABC real
+    Compatible 100% con main.py actual
     """
 
     # =========================
-    # PARÁMETROS FIJOS (TU TABLA)
+    # PARÁMETROS BASE (TU TABLA)
     # =========================
-
     DIAS_TRABAJO = 300
     LEAD_TIME = 5
     COSTO_PEDIR = 45000
 
+    # =========================
+    # DATOS ABC REALES
+    # =========================
     clases = {
-        "A": {
-            "demanda": 12000,
-            "costo_mantener": 3300,
-            "costo_unitario": 15000
-        },
-        "B": {
-            "demanda": 3500,
-            "costo_mantener": 9900,
-            "costo_unitario": 45000
-        },
-        "C": {
-            "demanda": 600,
-            "costo_mantener": 26400,
-            "costo_unitario": 120000
-        }
+        "A": {"demanda": 12000, "h": 3300},
+        "B": {"demanda": 3500, "h": 9900},
+        "C": {"demanda": 600, "h": 26400}
     }
 
-    resultado = {}
+    # =========================
+    # AGREGADOS GLOBAL (para UI única)
+    # =========================
+    demanda_total = 0
+    eoq_total = 0
+    reorder_total = 0
+    ss_total = 0
 
-    # =========================
-    # CÁLCULO POR CLASE
-    # =========================
-    for clase, d in clases.items():
+    for c, d in clases.items():
 
         demanda_anual = d["demanda"]
-        h = d["costo_mantener"]
+        h = d["h"]
+
+        demanda_diaria = demanda_anual / DIAS_TRABAJO
 
         # EOQ clásico
-        q_opt = np.sqrt((2 * demanda_anual * COSTO_PEDIR) / h)
+        eoq = np.sqrt((2 * demanda_anual * COSTO_PEDIR) / h)
 
-        # Reorder point (demanda diaria * lead time)
-        demanda_diaria = demanda_anual / DIAS_TRABAJO
+        # Reorder Point
         reorder_point = demanda_diaria * LEAD_TIME
 
-        # Stock de seguridad (simplificado empresarial)
+        # Stock de seguridad (20% buffer operativo)
         stock_seguridad = 0.2 * reorder_point
 
-        # nivel objetivo
-        nivel_objetivo = reorder_point + stock_seguridad
+        # acumulación ponderada (para dashboard único)
+        demanda_total += demanda_anual
+        eoq_total += eoq
+        reorder_total += reorder_point
+        ss_total += stock_seguridad
 
-        resultado[clase] = {
-            "EOQ": float(q_opt),
-            "reorder_point": float(reorder_point),
-            "stock_seguridad": float(stock_seguridad),
-            "nivel_objetivo": float(nivel_objetivo),
-            "demanda_anual": float(demanda_anual),
-            "costo_mantener": float(h)
-        }
+    # =========================
+    # INVENTARIO ACTUAL SIMULADO
+    # =========================
+    inventario_actual = demanda_total / DIAS_TRABAJO * 3
 
-    return resultado
+    # =========================
+    # PEDIDO SUGERIDO
+    # =========================
+    suggested_order = max(0, reorder_total - inventario_actual)
+
+    # =========================
+    # RIESGO
+    # =========================
+    if suggested_order > reorder_total * 0.5:
+        riesgo = "ALTO"
+    elif suggested_order > 0:
+        riesgo = "MEDIO"
+    else:
+        riesgo = "BAJO"
+
+    return {
+        "eoq": float(eoq_total / 3),
+        "reorder_point": float(reorder_total / 3),
+        "stock_seguridad": float(ss_total / 3),
+        "suggested_order": float(suggested_order),
+        "riesgo": riesgo
+    }
